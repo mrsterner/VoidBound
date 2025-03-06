@@ -1,6 +1,7 @@
 package dev.sterner.common.item.focus
 
 import com.sammy.malum.visual_effects.ScreenParticleEffects
+import dev.sterner.api.wand.IWandFocus
 import net.minecraft.client.Minecraft
 import net.minecraft.util.Mth
 import net.minecraft.world.item.Item
@@ -17,7 +18,7 @@ import team.lodestar.lodestone.systems.particle.render_types.LodestoneScreenPart
 import team.lodestar.lodestone.systems.particle.screen.ScreenParticleHolder
 import java.awt.Color
 
-abstract class AbstractFocusItem(properties: Properties) : Item(properties),
+abstract class AbstractFocusItem(val focus: IWandFocus, properties: Properties) : Item(properties),
     ItemParticleSupplier {
 
     abstract fun color(): Color

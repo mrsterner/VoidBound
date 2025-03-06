@@ -4,12 +4,13 @@ import com.sammy.malum.core.systems.spirit.MalumSpiritType
 import com.sammy.malum.registry.client.ParticleRegistry
 import com.sammy.malum.registry.common.SpiritTypeRegistry
 import com.sammy.malum.visual_effects.SpiritLightSpecs
-import dev.sterner.api.util.VoidBoundPlayerUtils
+import dev.sterner.api.VoidBoundApi
 import dev.sterner.api.util.VoidBoundPosUtils
+import dev.sterner.api.wand.IWandFocus
 import dev.sterner.mixin_logic.ParticleEngineMixinLogic
 import dev.sterner.networking.ExcavationPacket
 import dev.sterner.registry.VoidBoundPacketRegistry
-import dev.sterner.registry.VoidBoundWandFocusRegistry
+import net.minecraft.client.Minecraft
 import net.minecraft.sounds.SoundSource
 import net.minecraft.util.RandomSource
 import net.minecraft.world.InteractionHand
@@ -31,56 +32,50 @@ import team.lodestar.lodestone.systems.particle.data.GenericParticleData
 import team.lodestar.lodestone.systems.particle.data.spin.SpinParticleData
 import team.lodestar.lodestone.systems.particle.render_types.LodestoneWorldParticleRenderType
 import team.lodestar.lodestone.systems.particle.world.behaviors.components.DirectionalBehaviorComponent
-import java.awt.Color
 import kotlin.math.cos
 import kotlin.math.sin
 
-class ExcavationFocusItem(properties: Properties) :
-    AbstractFocusItem(VoidBoundWandFocusRegistry.EXCAVATION.get(), properties) {
 
-    override fun color(): Color = Color(135, 255, 135)
-
-    override fun endColor(): Color = Color(0, 225, 0)
+class ExcavationFocus : IWandFocus {
 
     private var timeToBreak: Float? = null
     private var breakTime: Int = 0
     private var breakProgress: Int = -1
     private var blockState: BlockState? = null
 
-    fun onUsingAbilityTick(stack: ItemStack, level: Level, player: Player) {
-        val maxReach = 10.0
-        val tickDelta = 1.0f
-        val includeFluids = false
+    override fun onUsingFocusTick(stack: ItemStack, level: Level, player: Player) {
+        if (level.isClientSide) {
+            val client = Minecraft.getInstance()
+            val maxReach = 10.0
+            val tickDelta = 1.0f
+            val includeFluids = false
 
-        val hit: HitResult? = player.pick(maxReach, tickDelta, includeFluids)
+            val hit: HitResult? = client.cameraEntity?.pick(maxReach, tickDelta, includeFluids)
 
-        if (hit != null) {
-            if (hit.type == HitResult.Type.BLOCK) {
-                val blockHit = hit as BlockHitResult
-                val blockPos = blockHit.blockPos
-                val newState = level.getBlockState(blockPos) ?: return
+            if (hit != null) {
+                if (hit.type == HitResult.Type.BLOCK) {
+                    val blockHit = hit as BlockHitResult
+                    val blockPos = blockHit.blockPos
+                    val newState = client.level?.getBlockState(blockPos) ?: return
 
-                if (blockState != newState) {
-                    this.breakTime = 0
-                    this.breakProgress = -1
-                }
+                    if (blockState != newState) {
+                        this.breakTime = 0
+                        this.breakProgress = -1
+                    }
 
-                blockState = newState
+                    blockState = newState
 
 
-                val pos = getProjectileSpawnPos(player, InteractionHand.MAIN_HAND, 1.5f, 0.6f)
-                if (level.isClientSide) {
+                    val pos = getProjectileSpawnPos(player, InteractionHand.MAIN_HAND, 1.5f, 0.6f)
                     spawnChargeParticles(player.level(), player, pos, 0.5f)
                     spec(level, player.lookAngle.normalize(), pos, SpiritTypeRegistry.EARTHEN_SPIRIT, level.random)
-                }
 
-                if (!VoidBoundPlayerUtils.canPlayerBreakBlock(level, player, blockPos)) {
-                    ParticleEngineMixinLogic.logic(level, blockPos, blockState!!, level.random, hit.direction)
-                    return
-                }
+                    if (!VoidBoundApi.canPlayerBreakBlock(level, player, blockPos)) {
+                        ParticleEngineMixinLogic.logic(level, blockPos, blockState!!, level.random, hit.direction)
+                        return
+                    }
 
-                timeToBreak = (20 * blockState!!.getDestroySpeed(level, blockPos))
-                if (level.isClientSide) {
+                    timeToBreak = (20 * blockState!!.getDestroySpeed(level, blockPos))
                     val coordPos: List<Vec3> = VoidBoundPosUtils.getFaceCoords(level, blockState!!, blockPos)
                     for (pos1 in coordPos) {
                         val lightSpecs: ParticleEffectSpawner =
@@ -91,12 +86,9 @@ class ExcavationFocusItem(properties: Properties) :
                         lightSpecs.spawnParticles()
                         lightSpecs.spawnParticles()
                     }
-                }
+                    this.breakTime++
+                    val progress: Int = (this.breakTime / this.timeToBreak!!.toFloat() * 10).toInt()
 
-                this.breakTime++
-                val progress: Int = (this.breakTime / this.timeToBreak!!.toFloat() * 10).toInt()
-
-                if (level.isClientSide) {
                     VoidBoundPacketRegistry.VOID_BOUND_CHANNEL.sendToServer(
                         ExcavationPacket(
                             blockPos,
@@ -105,20 +97,20 @@ class ExcavationFocusItem(properties: Properties) :
                             progress
                         )
                     )
-                }
 
-                if (breakTime % 6 == 0 && level.isClientSide) {
-                    level.playSound(player, blockPos, blockState!!.soundType.breakSound, SoundSource.BLOCKS)
-                }
+                    if (breakTime % 6 == 0) {
+                        level.playSound(player, blockPos, blockState!!.soundType.breakSound, SoundSource.BLOCKS)
+                    }
 
-                if (progress != this.breakProgress) {
-                    this.breakProgress = progress
-                }
-                level.destroyBlockProgress(player.id + ExcavationPacket.generatePosHash(blockPos), blockPos, progress)
+                    if (progress != this.breakProgress) {
+                        this.breakProgress = progress
+                    }
+                    level.destroyBlockProgress(player.id + ExcavationPacket.generatePosHash(blockPos), blockPos, progress)
 
-                if (this.breakTime >= this.timeToBreak!!) {
-                    this.breakTime = 0
-                    this.breakProgress = -1
+                    if (this.breakTime >= this.timeToBreak!!) {
+                        this.breakTime = 0
+                        this.breakProgress = -1
+                    }
                 }
             }
         }

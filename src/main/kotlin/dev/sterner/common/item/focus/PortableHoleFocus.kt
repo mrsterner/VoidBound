@@ -1,9 +1,9 @@
 package dev.sterner.common.item.focus
 
-import dev.sterner.api.util.VoidBoundBlockUtils
+import dev.sterner.api.VoidBoundApi
+import dev.sterner.api.wand.IWandFocus
 import dev.sterner.registry.VoidBoundBlockRegistry
 import dev.sterner.registry.VoidBoundTags
-import dev.sterner.registry.VoidBoundWandFocusRegistry
 import eu.pb4.common.protection.api.CommonProtection
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
@@ -15,24 +15,12 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.HitResult
-import java.awt.Color
 import java.util.*
 
-class PortableHoleFocusItem(properties: Properties) :
-    AbstractFocusItem(VoidBoundWandFocusRegistry.PORTABLE_HOLE.get(), properties) {
-    override fun color(): Color {
-        return Color(0, 0, 0)
-    }
+@Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA")
+class PortableHoleFocus : IWandFocus {
 
-    override fun endColor(): Color {
-        return Color(0, 0, 0)
-    }
-
-    override fun isVoid(): Boolean {
-        return true
-    }
-
-    fun onAbilityRightClick(stack: ItemStack, level: Level, player: Player, hitResult: HitResult) {
+    override fun onFocusRightClick(stack: ItemStack, level: Level, player: Player, hitResult: HitResult) {
         if (hitResult.type == HitResult.Type.BLOCK) {
             val blockHit = hitResult as BlockHitResult
             val blockPos = blockHit.blockPos
@@ -83,7 +71,7 @@ class PortableHoleFocusItem(properties: Properties) :
      * Verifies if the block can be broken by the player.
      */
     private fun canBlockBeBroken(level: Level, pos: BlockPos, player: Player): Boolean {
-        return VoidBoundBlockUtils.canBlockBreak(level, pos) &&
+        return VoidBoundApi.canBlockBreak(level, pos) &&
                 CommonProtection.canBreakBlock(level, pos, player.gameProfile, player)
     }
 
@@ -174,7 +162,7 @@ class PortableHoleFocusItem(properties: Properties) :
          * Checks if the block can be broken at the given position by the player.
          */
         private fun canBreakBlock(level: Level, pos: BlockPos, player: Player?): Boolean {
-            return VoidBoundBlockUtils.canBlockBreak(level, pos) &&
+            return VoidBoundApi.canBlockBreak(level, pos) &&
                     CommonProtection.canBreakBlock(level, pos, player?.gameProfile, player)
         }
     }

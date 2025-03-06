@@ -51,6 +51,9 @@ object VoidBoundPacketRegistry {
             AbilityUpdatePacket::class.java, index++
         )
         VOID_BOUND_CHANNEL.registerC2SPacket(
+            SelectFocusPacket::class.java, index++
+        )
+        VOID_BOUND_CHANNEL.registerC2SPacket(
             UnlockAbilityPacket::class.java, index++
         )
     }

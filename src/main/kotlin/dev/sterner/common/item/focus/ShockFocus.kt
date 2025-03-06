@@ -1,8 +1,8 @@
 package dev.sterner.common.item.focus
 
 import com.sammy.malum.registry.client.ParticleRegistry
+import dev.sterner.api.wand.IWandFocus
 import dev.sterner.common.entity.BoltEntity
-import dev.sterner.registry.VoidBoundWandFocusRegistry
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.projectile.ProjectileUtil
@@ -25,15 +25,15 @@ import team.lodestar.lodestone.systems.particle.world.behaviors.components.Direc
 import java.awt.Color
 import kotlin.math.pow
 
-class ShockFocusItem(properties: Properties) : AbstractFocusItem(VoidBoundWandFocusRegistry.SHOCK.get(),properties) {
 
-    override fun color(): Color = Color(155, 255, 255)
-
-    override fun endColor(): Color = Color(50, 125, 203)
+class ShockFocus : IWandFocus {
 
     private var cooldown = 0
+    override fun onFocusRightClick(stack: ItemStack, level: Level, player: Player, hitResult: HitResult) {
+        //onUsingFocusTick(stack, level, player)
+    }
 
-    fun onUsingAbilityTick(stack: ItemStack, level: Level, player: Player) {
+    override fun onUsingFocusTick(stack: ItemStack, level: Level, player: Player) {
         val distance: Double = getMaxDistance().pow(2.0)
         val vec3d: Vec3 = player.getEyePosition(1f)
         val vec3d2: Vec3 = player.getViewVector(1f)
